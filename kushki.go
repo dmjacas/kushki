@@ -39,10 +39,10 @@ var db *dBConfig
 // Expiration time in minutes that the payment request lasts
 
 // Config pay db connectiong
-func Config(urlKushkiURLPayment, KushkiPublicKey, KushkiPrivateKey, dbCharset, dbDialect, dbName, dbUsername, dbHost, dbPort, dbPassword string, Expiration int) {
+func Config(urlKushkiURLPayment, ParamKushkiPublicKey, ParamKushkiPrivateKey, dbCharset, dbDialect, dbName, dbUsername, dbHost, dbPort, dbPassword string, Expiration int) {
 	KushkiURL = urlKushkiURLPayment
-	KushkiPublicKey = "20000000107193962000"  //KushkiPublicKey
-	KushkiPrivateKey = "20000000102569300000" // KushkiPrivateKey
+	KushkiPublicKey = ParamKushkiPublicKey
+	KushkiPrivateKey = ParamKushkiPrivateKey
 	db := &dBConfig{
 		Dialect:  dbDialect,
 		Username: dbUsername,
@@ -95,32 +95,13 @@ func Connect(config *dBConfig) (*gorm.DB, error) {
 	return db, nil
 }
 
-// CreateTransaction request token
-func CreateTransaction(data *Request) (string, error) {
-	// jsonRequest, err := json.Marshal(data)
-	response := "sdsd"
-	return response, nil
-}
-
-// CancelTransaction cancel transaction
-func CancelTransaction(data string) (string, error) {
-	response := "sdsd"
-	return response, nil
-}
-
-// ReimburseTransaction reimburse transaction
-func ReimburseTransaction(data string) (string, error) {
-	response := "sdsd"
-	return response, nil
-}
-
-//PreAuthorizationPayment preauthorization payment
-func PreAuthorizationPayment(par *PreAuthorizationParams) (*PreAuthorizationResponse, error) {
+// RequestTokenCard request token card
+func RequestTokenCard(par *Request) (*KushkiResponse, error) {
 	jsonRequest, err := json.Marshal(par)
 	if err != nil {
 		return nil, errors.New("error to JSON encode the body request")
 	}
-	req, err := http.NewRequest("POST", KushkiURL+"preAuthorization", bytes.NewBuffer(jsonRequest))
+	req, err := http.NewRequest("POST", KushkiURL+"tokens", bytes.NewBuffer(jsonRequest))
 	if err != nil {
 		log.Fatal("Error reading request. ", err)
 	}
@@ -130,14 +111,13 @@ func PreAuthorizationPayment(par *PreAuthorizationParams) (*PreAuthorizationResp
 		return nil, errors.New("error in the http call")
 	}
 	client := &http.Client{Timeout: time.Second * 10}
-	fmt.Println(KushkiPrivateKey)
 	response, err := client.Do(req)
 	if err != nil {
 		return nil, errors.New("error in the http call")
 	}
 
 	dataResp, err := ioutil.ReadAll(response.Body)
-	var KushKiResponse PreAuthorizationResponse
+	var KushKiResponse KushkiResponse
 	if err = json.Unmarshal(dataResp, &KushKiResponse); err != nil {
 		return nil, errors.New("error in the return values of the http call")
 	}
@@ -145,8 +125,112 @@ func PreAuthorizationPayment(par *PreAuthorizationParams) (*PreAuthorizationResp
 	return &KushKiResponse, nil
 }
 
+// CancelTransaction cancel transaction
+func CancelTransaction(ticketNumber string, par *PreAuthorizationParams) (*KushkiResponse, error) {
+	jsonRequest, err := json.Marshal(par)
+	if err != nil {
+		return nil, errors.New("error to JSON encode the body request")
+	}
+	req, err := http.NewRequest("DELETE", KushkiURL+"charges/"+ticketNumber, bytes.NewBuffer(jsonRequest))
+	if err != nil {
+		log.Fatal("Error reading request. ", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Private-Merchant-Id", KushkiPrivateKey)
+	if err != nil {
+		return nil, errors.New("error in the http call")
+	}
+	client := &http.Client{Timeout: time.Second * 10}
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, errors.New("error in the http call")
+	}
+
+	dataResp, err := ioutil.ReadAll(response.Body)
+	var KushKiResponse KushkiResponse
+	if err = json.Unmarshal(dataResp, &KushKiResponse); err != nil {
+		return nil, errors.New("error in the return values of the http call")
+	}
+
+	return &KushKiResponse, nil
+}
+
+// ReimburseTransaction reimburse transaction
+func ReimburseTransaction(ticketNumber string, par *PreAuthorizationParams) (*KushkiResponse, error) {
+	jsonRequest, err := json.Marshal(par)
+	if err != nil {
+		return nil, errors.New("error to JSON encode the body request")
+	}
+	req, err := http.NewRequest("DELETE", KushkiURL+"refund/"+ticketNumber, bytes.NewBuffer(jsonRequest))
+	if err != nil {
+		log.Fatal("Error reading request. ", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Private-Merchant-Id", KushkiPrivateKey)
+	if err != nil {
+		return nil, errors.New("error in the http call")
+	}
+	client := &http.Client{Timeout: time.Second * 10}
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, errors.New("error in the http call")
+	}
+
+	dataResp, err := ioutil.ReadAll(response.Body)
+	var KushKiResponse KushkiResponse
+	if err = json.Unmarshal(dataResp, &KushKiResponse); err != nil {
+		return nil, errors.New("error in the return values of the http call")
+	}
+
+	return &KushKiResponse, nil
+}
+
+//PreAuthorizationPayment preauthorization payment
+func PreAuthorizationPayment(par *PreAuthorizationParams) (*KushkiResponse, error) {
+	jsonRequest, err := json.Marshal(par)
+	if err != nil {
+		return nil, errors.New("error to JSON encode the body request")
+	}
+
+	req, err := http.NewRequest("POST", KushkiURL+"preAuthorization", bytes.NewBuffer(jsonRequest))
+	if err != nil {
+		log.Fatal("Error reading request. ", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Private-Merchant-Id", KushkiPrivateKey)
+	if err != nil {
+		return nil, errors.New("error in the http call")
+	}
+	client := &http.Client{Timeout: time.Second * 100}
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, errors.New("error in the http call")
+	}
+
+	dataResp, err := ioutil.ReadAll(response.Body)
+	var KushKiResponse KushkiResponse
+	if err = json.Unmarshal(dataResp, &KushKiResponse); err != nil {
+		return nil, errors.New("error in the return values of the http call")
+	}
+
+	kushkiRequestLog := &KushkiRequestLog{
+		Proces: "preAuthorization",
+		Code:   KushKiResponse.Code,
+	}
+	tx := P2PDB.Begin()
+	if result := tx.Create(&kushkiRequestLog); result.Error != nil {
+		tx.Rollback()
+		return nil, errors.New("error in saving the data")
+	}
+	if result := tx.Commit(); result.Error != nil {
+		tx.Rollback()
+		return nil, errors.New("error in saving the data")
+	}
+	return &KushKiResponse, nil
+}
+
 // CaptureAuthorizationPayment capture payment
-func CaptureAuthorizationPayment(par *CaptureParams) (*PreAuthorizationResponse, error) {
+func CaptureAuthorizationPayment(par *CaptureParams) (*KushkiResponse, error) {
 
 	jsonRequest, err := json.Marshal(par)
 	if err != nil {
@@ -169,7 +253,7 @@ func CaptureAuthorizationPayment(par *CaptureParams) (*PreAuthorizationResponse,
 	}
 
 	dataResp, err := ioutil.ReadAll(response.Body)
-	var KushKiResponse PreAuthorizationResponse
+	var KushKiResponse KushkiResponse
 	if err = json.Unmarshal(dataResp, &KushKiResponse); err != nil {
 		return nil, errors.New("error in the return values of the http call")
 	}
@@ -188,9 +272,9 @@ type Card struct {
 
 // Request request structure
 type Request struct {
-	Card        *Card  `json:"card"`
-	RotalAmount string `json:"totalAmount"`
-	Currency    string `json:"currency"`
+	Card        *Card   `json:"card"`
+	RotalAmount float64 `json:"totalAmount"`
+	Currency    string  `json:"currency"`
 }
 
 // Amount amount structure
@@ -204,41 +288,41 @@ type Amount struct {
 
 //Details response detail
 type Details struct {
-	ApprovalCode              string  `json:"approvalCode, omitempty"`
-	ApprovedTransactionAmount float64 `json:"approvedTransactionAmount, omitempty"`
-	BinCard                   string  `json:"binCard, omitempty"`
-	CardHolderName            string  `json:"cardHolderName, omitempty"`
-	CardType                  string  `json:"cardType, omitempty"`
-	LastFourDigitsOfCard      string  `json:"lastFourDigitsOfCard, omitempty"`
-	MerchantName              string  `json:"merchantName, omitempty"`
-	ProcessorName             string  `json:"processorName, omitempty"`
-	Recap                     string  `json:"recap, omitempty"`
-	ResponseCode              string  `json:"responseCode, omitempty"`
-	ResponseText              string  `json:"responseText, omitempty"`
-	TicketNumber              string  `json:"ticketNumber, omitempty"`
-	TransactionID             string  `json:"transactionId, omitempty"`
-	Token                     string  `json:"token, omitempty"`
-	FullResponse              bool    `json:"fullResponse, omitempty" `
-	AcquirerBank              string  `json:"acquirerBank, omitempty"`
-	IP                        string  `json:"ip, omitempty"`
-	maskedCardNumber          string  `json:"maskedCardNumber, omitempty"`
-	approvedTransactionAmount string  `json:"approvedTransactionAmount"`
-	SubtotalIva               string  `json:"subtotalIva, omitempty" `
-	SubtotalIva0              string  `json:"subtotalIva0, omitempty"`
-	Created                   string  `json:"created, omitempty"`
-	TransactionType           string  `json:"transactionType, omitempty"`
-	TransactionStatus         string  `json:"transactionStatus, omitempty"`
-	SyncMode                  string  `json:"syncMode, omitempty"`
-	CurrencyCode              string  `json:"currencyCode, omitempty"`
-	MerchantID                string  `json:"merchantId, omitempty"`
-	ProcessorID               string  `json:"processorId, omitempty"`
-	LastFourDigits            string  `json:"lastFourDigits, omitempty"`
-	PaymentBrand              string  `json:"paymentBrand, omitempty"`
-	IceValue                  string  `json:"iceValue, omitempty"`
-	RequestAmount             string  `json:"requestAmount, omitempty"`
-	IvaValue                  string  `json:"ivaValue, omitempty"`
-	ProcessorBankName         string  `json:"processorBankName, omitempty"`
-	TransactionReference      string  `json:"transactionReference, omitempty"`
+	ApprovalCode              string      `json:"approvalCode,omitempty"`
+	ApprovedTransactionAmount float64     `json:"approvedTransactionAmount,omitempty"`
+	BinCard                   string      `json:"binCard,omitempty"`
+	CardHolderName            string      `json:"cardHolderName,omitempty"`
+	CardType                  string      `json:"cardType,omitempty"`
+	LastFourDigitsOfCard      string      `json:"lastFourDigitsOfCard,omitempty"`
+	MerchantName              string      `json:"merchantName,omitempty"`
+	ProcessorName             string      `json:"processorName,omitempty"`
+	Recap                     string      `json:"recap,omitempty"`
+	ResponseCode              string      `json:"responseCode,omitempty"`
+	ResponseText              string      `json:"responseText,omitempty"`
+	TicketNumber              string      `json:"ticketNumber,omitempty"`
+	TransactionID             string      `json:"transactionId,omitempty"`
+	Token                     string      `json:"token,omitempty"`
+	FullResponse              bool        `json:"fullResponse,omitempty" `
+	AcquirerBank              string      `json:"acquirerBank,omitempty"`
+	IP                        string      `json:"ip,omitempty"`
+	MaskedCardNumber          string      `json:"maskedCardNumber,omitempty"`
+	SubtotalIva               string      `json:"subtotalIva,omitempty" `
+	SubtotalIva0              string      `json:"subtotalIva0,omitempty"`
+	Created                   string      `json:"created,omitempty"`
+	TransactionType           string      `json:"transactionType,omitempty"`
+	TransactionStatus         string      `json:"transactionStatus,omitempty"`
+	SyncMode                  string      `json:"syncMode,omitempty"`
+	CurrencyCode              string      `json:"currencyCode,omitempty"`
+	MerchantID                string      `json:"merchantId,omitempty"`
+	ProcessorID               string      `json:"processorId,omitempty"`
+	LastFourDigits            string      `json:"lastFourDigits,omitempty"`
+	PaymentBrand              string      `json:"paymentBrand,omitempty"`
+	IceValue                  string      `json:"iceValue,omitempty"`
+	RequestAmount             string      `json:"requestAmount,omitempty"`
+	IvaValue                  string      `json:"ivaValue,omitempty"`
+	ProcessorBankName         string      `json:"processorBankName,omitempty"`
+	TransactionReference      string      `json:"transactionReference,omitempty"`
+	Errors                    interface{} `json:"errors,omitempty"`
 }
 
 //BinInfo modal
@@ -260,19 +344,25 @@ type PreAuthorizationParams struct {
 	FullResponse bool      `json:"fullResponse"`
 }
 
-// PreAuthorizationResponse response
-type PreAuthorizationResponse struct {
+// KushkiResponse response
+type KushkiResponse struct {
 	Code         string   `json:"code"`
 	Details      *Details `json:"details"`
 	Message      string   `json:"message"`
-	BinInfo      *BinInfo `json:"binInfo, omitempty"`
-	TicketNumber string   `json:"ticketNumber, omitempty"`
+	BinInfo      *BinInfo `json:"binInfo,omitempty"`
+	TicketNumber string   `json:"ticketNumber,omitempty"`
+	Token        *Token   `json:"token,omitempty"`
 }
 
 // CaptureParams struct
 type CaptureParams struct {
-	TicketNumber string      `json:"ticketNumber, omitempty"`
-	Amount       *Amount     `json:"amount, omitempty"`
-	FullResponse string      `json:"fullResponse"`
-	Metadata     interface{} `json:"matadata, omitempty"`
+	TicketNumber string      `json:"ticketNumber,omitempty"`
+	Amount       *Amount     `json:"amount,omitempty"`
+	FullResponse interface{} `json:"fullResponse"`
+	Metadata     bool        `json:"matadata,omitempty"`
+}
+
+// Token struct
+type Token struct {
+	Token string `json:"token,omitempty"`
 }
