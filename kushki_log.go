@@ -25,14 +25,10 @@ type KushkiRequestLog struct {
 	TransactionID             string    `json:"transactionId" gorm:"size:250"`
 	ResponseText              string    `json:"responseText" gorm:"size:250"`
 	CardHolderName            string    `json:"cardHolderName" gorm:"size:250"`
-	LastFourDigits            string    `json:"lastFourDigits" gorm:"size:250"`
-	BinCard                   string    `json:"binCard" gorm:"size:250"`
 	PaymentBrand              string    `json:"paymentBrand" gorm:"size:250"`
 	RequestAmount             float64   `json:"requestAmount"`
 	IvaValue                  float64   `json:"ivaValue"`
 	MerchantName              string    `json:"merchantName" gorm:"size:250"`
-	ProcessorName             string    `json:"processorName" gorm:"size:250"`
-	TransactionReference      string    `json:"transactionReference" gorm:"size:250"`
 	CreatedAt                 time.Time `json:"createdAt"`
 	UpdatedAt                 time.Time `json:"updatedAt"`
 	DeletedAt                 null.Time `json:"-"`
