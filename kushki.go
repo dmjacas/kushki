@@ -9,8 +9,6 @@ import (
 	"log"
 	"net/http"
 	"time"
-
-	"github.com/jinzhu/gorm"
 )
 
 // KushkiURL kushki url payment
@@ -22,77 +20,17 @@ var KushkiPublicKey string
 //KushkiPrivateKey private key
 var KushkiPrivateKey string
 
-// P2PDB db object
-var P2PDB *gorm.DB
-var db *dBConfig
-
 // Config configure payment library
 // KushkiURL Kushki url
 // KushkiPublicKey Kushki public key
 // KushkiPrivateKey Kushki private key
 
-// dbCharset db Charset
-// dbDialect db Dialect
-// dbName dn name
-// dbUsername db username
-// dbPassword db password
-// Expiration time in minutes that the payment request lasts
-
 // Config pay db connectiong
-func Config(urlKushkiURLPayment, ParamKushkiPublicKey, ParamKushkiPrivateKey, dbCharset, dbDialect, dbName, dbUsername, dbHost, dbPort, dbPassword string, Expiration int) {
-	KushkiURL = "https://api-uat.kushkipagos.com/card/v1/" //urlKushkiURLPayment
-	KushkiPublicKey = "20000000107193962000"               //ParamKushkiPublicKey
-	KushkiPrivateKey = "20000000102569300000"              //ParamKushkiPrivateKey
-	db := &dBConfig{
-		Dialect:  dbDialect,
-		Username: dbUsername,
-		Password: dbPassword,
-		Host:     dbHost,
-		Name:     dbName,
-		Port:     dbPort,
-		Charset:  dbCharset,
-	}
-	P2PDB, _ = Connect(db)
-	migration()
+func Config(urlKushkiURLPayment, ParamKushkiPublicKey, ParamKushkiPrivateKey string) {
+	KushkiURL = urlKushkiURLPayment
+	KushkiPublicKey = ParamKushkiPublicKey
+	KushkiPrivateKey = ParamKushkiPrivateKey
 
-}
-
-// migration  create table if not exist
-func migration() {
-	pingErr := P2PDB.DB().Ping()
-	if pingErr != nil {
-		fmt.Println(pingErr)
-	} else {
-		P2PDB.AutoMigrate(&KushkiRequestLog{})
-	}
-}
-
-// dBConfig database config structure
-type dBConfig struct {
-	Host     string `default:"localhost"`
-	Port     string `default:"3306"`
-	Dialect  string `default:"mysql"`
-	Username string
-	Password string
-	Name     string
-	Charset  string `default:"utf8"`
-}
-
-// Connect handles the connection to the database and returns it
-func Connect(config *dBConfig) (*gorm.DB, error) {
-	dbURI := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=%s&parseTime=True",
-		config.Username,
-		config.Password,
-		config.Host,
-		config.Port,
-		config.Name,
-		config.Charset)
-	db, err := gorm.Open(config.Dialect, dbURI)
-	if err != nil {
-		log.Fatalln("db connect", err)
-	}
-
-	return db, nil
 }
 
 // RequestTokenCard request token card
@@ -243,19 +181,6 @@ func PreAuthorizationPayment(par *PreAuthorizationParams) (*KushkiResponse, erro
 		return nil, errors.New("error in the return values of the http call")
 	}
 
-	kushkiRequestLog := &KushkiRequestLog{
-		Proces: "preAuthorization",
-		Code:   KushKiResponse.Code,
-	}
-	tx := P2PDB.Begin()
-	if result := tx.Create(&kushkiRequestLog); result.Error != nil {
-		tx.Rollback()
-		return nil, errors.New("error in saving the data")
-	}
-	if result := tx.Commit(); result.Error != nil {
-		tx.Rollback()
-		return nil, errors.New("error in saving the data")
-	}
 	return &KushKiResponse, nil
 }
 
